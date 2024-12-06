@@ -51,6 +51,8 @@ class SecurityConfig {
                         .hasRole("admin")
                         .requestMatchers("/users*")
                         .hasAnyRole("user", "admin")
+                        .requestMatchers("/tokens*")
+                        .hasAnyRole("user", "admin")
                         .anyRequest()
                         .authenticated());
         http.oauth2Login(withDefaults())
