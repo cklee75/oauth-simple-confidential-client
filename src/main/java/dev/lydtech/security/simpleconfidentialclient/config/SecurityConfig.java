@@ -48,10 +48,9 @@ class SecurityConfig {
     @Bean
     OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler(ClientRegistrationRepository clientRegistrationRepository) {
         OidcClientInitiatedLogoutSuccessHandler successHandler = new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
-        successHandler.setPostLogoutRedirectUri(URI.create("http://localhost:8082").toString());
+        successHandler.setPostLogoutRedirectUri(URI.create("https://verbally-knowing-monkey.ngrok-free.app").toString());
         return successHandler;
     }
-
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler, OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> tokenResponseClient) throws Exception {
@@ -68,7 +67,6 @@ class SecurityConfig {
                         .anyRequest()
                         .authenticated());
         http.oauth2Login(withDefaults())
-        // http.oauth2Login(oauth2 -> oauth2.tokenEndpoint(token -> token.accessTokenResponseClient(accessTokenResponseClient())))
                 .logout(logout ->
                         logout.logoutSuccessHandler(oidcLogoutSuccessHandler));
         return http.build();
