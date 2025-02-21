@@ -15,14 +15,19 @@ import org.springframework.security.oauth2.client.endpoint.DefaultAuthorizationC
 import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
+import org.springframework.security.oauth2.client.oidc.web.server.logout.OidcClientInitiatedServerLogoutSuccessHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
+import org.springframework.security.web.server.authentication.logout.ServerLogoutSuccessHandler;
 import org.springframework.web.client.RestTemplate;
 import dev.lydtech.security.simpleconfidentialclient.LoggingRequestInterceptor;
+import dev.lydtech.security.simpleconfidentialclient.session.OIDCLoginSuccessHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.URI;
@@ -40,6 +45,12 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @Slf4j
 class SecurityConfig {
 
+    private final OIDCLoginSuccessHandler oidcLoginSuccessHandler;
+
+    public SecurityConfig(OIDCLoginSuccessHandler oidcLoginSuccessHandler) {
+        this.oidcLoginSuccessHandler = oidcLoginSuccessHandler;
+    }
+
     @Bean
     protected SessionAuthenticationStrategy sessionAuthenticationStrategy() {
         return new RegisterSessionAuthenticationStrategy(new SessionRegistryImpl());
@@ -48,15 +59,29 @@ class SecurityConfig {
     @Bean
     OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler(ClientRegistrationRepository clientRegistrationRepository) {
         OidcClientInitiatedLogoutSuccessHandler successHandler = new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
-        successHandler.setPostLogoutRedirectUri(URI.create("https://verbally-knowing-monkey.ngrok-free.app").toString());
+        // successHandler.setPostLogoutRedirectUri(URI.create("http://localhost:8082").toString());
+        successHandler.setPostLogoutRedirectUri(URI.create("https://prawn-humble-mackerel.ngrok-free.app").toString());
         return successHandler;
+    }
+        @Bean
+    public JwtDecoder jwtDecoder() {
+        return NimbusJwtDecoder.withJwkSetUri("https://app.please-open.it/auth/realms/ee1afd72-71a9-49ad-a975-54ed46cc56a3/protocol/openid-connect/certs").build();
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler, OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> tokenResponseClient) throws Exception {
+        http
+            .headers(headers -> headers
+                .frameOptions(frameOptions -> frameOptions.sameOrigin()) // Allow same-origin iframes
+                .contentSecurityPolicy(csp -> csp.policyDirectives("frame-src 'self' https://app.please-open.it http://localhost:8082 https://prawn-humble-mackerel.ngrok-free.app;"))
+                .contentSecurityPolicy(csp -> csp.policyDirectives("frame-ancestors 'self' https://app.please-open.it;"))
+
+            );
         http.authorizeHttpRequests(authorise ->
                 authorise
                         .requestMatchers("/")
+                        .permitAll()
+                        .requestMatchers("/", "/logout/backchannel")
                         .permitAll()
                         .requestMatchers("/admin*")
                         .hasRole("admin")
@@ -65,10 +90,22 @@ class SecurityConfig {
                         .requestMatchers("/tokens*")
                         .hasAnyRole("user", "admin", "USER", "ADMIN")
                         .anyRequest()
-                        .authenticated());
-        http.oauth2Login(withDefaults())
+                        .authenticated())
+            .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/logout/backchannel"));
+        http.oauth2Login(oauth2 -> oauth2
+                    .successHandler(oidcLoginSuccessHandler))
                 .logout(logout ->
-                        logout.logoutSuccessHandler(oidcLogoutSuccessHandler));
+                        logout
+                        .logoutSuccessHandler(oidcLogoutSuccessHandler)
+                        .logoutSuccessUrl("https://app.please-open.it/auth/realms/ee1afd72-71a9-49ad-a975-54ed46cc56a3/protocol/openid-connect/logout?redirect_uri=http://localhost:8082")
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                        .deleteCookies("JSESSIONID"));
+        http
+            .sessionManagement(session -> session
+                .sessionFixation(sessionFixation -> sessionFixation.none()));
+
         return http.build();
     }
 
