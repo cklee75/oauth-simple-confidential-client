@@ -15,7 +15,6 @@ import org.springframework.security.oauth2.client.endpoint.DefaultAuthorizationC
 import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
-import org.springframework.security.oauth2.client.oidc.web.server.logout.OidcClientInitiatedServerLogoutSuccessHandler;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
@@ -24,7 +23,6 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
-import org.springframework.security.web.server.authentication.logout.ServerLogoutSuccessHandler;
 import org.springframework.web.client.RestTemplate;
 import dev.lydtech.security.simpleconfidentialclient.LoggingRequestInterceptor;
 import dev.lydtech.security.simpleconfidentialclient.session.OIDCLoginSuccessHandler;
@@ -38,8 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-
 @Configuration
 @EnableWebSecurity
 @Slf4j
@@ -49,11 +45,6 @@ class SecurityConfig {
 
     public SecurityConfig(OIDCLoginSuccessHandler oidcLoginSuccessHandler) {
         this.oidcLoginSuccessHandler = oidcLoginSuccessHandler;
-    }
-
-    @Bean
-    protected SessionAuthenticationStrategy sessionAuthenticationStrategy() {
-        return new RegisterSessionAuthenticationStrategy(new SessionRegistryImpl());
     }
 
     @Bean
