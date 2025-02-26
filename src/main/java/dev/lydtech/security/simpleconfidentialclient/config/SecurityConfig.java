@@ -1,5 +1,6 @@
 package dev.lydtech.security.simpleconfidentialclient.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -25,33 +26,25 @@ import java.util.Set;
 @Slf4j
 class SecurityConfig {
 
+    @Value("${domain-url}")
+    private String domainUrl;
+
+    @Value("${spring.security.oauth2.client.provider.keycloak.issuer-uri}")
+    private String issuerUri;
+
     private final OIDCLoginSuccessHandler oidcLoginSuccessHandler;
 
     public SecurityConfig(OIDCLoginSuccessHandler oidcLoginSuccessHandler) {
         this.oidcLoginSuccessHandler = oidcLoginSuccessHandler;
     }
 
-    // @Bean
-    // OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler(ClientRegistrationRepository clientRegistrationRepository) {
-    //     OidcClientInitiatedLogoutSuccessHandler successHandler = new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
-    //     successHandler.setPostLogoutRedirectUri(URI.create("https://prawn-humble-mackerel.ngrok-free.app").toString());
-    //     return successHandler;
-    // }
-
     @Bean
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withJwkSetUri("https://app.please-open.it/auth/realms/ee1afd72-71a9-49ad-a975-54ed46cc56a3/protocol/openid-connect/certs").build();
+        return NimbusJwtDecoder.withJwkSetUri(issuerUri + "/protocol/openid-connect/certs").build();
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        // http
-        //     .headers(headers -> headers
-        //         .frameOptions(frameOptions -> frameOptions.sameOrigin()) // Allow same-origin iframes
-        //         .contentSecurityPolicy(csp -> csp.policyDirectives("frame-src 'self' https://app.please-open.it http://localhost:8082 https://prawn-humble-mackerel.ngrok-free.app;"))
-        //         .contentSecurityPolicy(csp -> csp.policyDirectives("frame-ancestors 'self' https://app.please-open.it;"))
-
-        //     );
         http.authorizeHttpRequests(authorise ->
                 authorise
                         .requestMatchers("/")
@@ -72,8 +65,7 @@ class SecurityConfig {
                     .successHandler(oidcLoginSuccessHandler))
                 .logout(logout ->
                         logout
-                        // .logoutSuccessHandler(oidcLogoutSuccessHandler)
-                        .logoutSuccessUrl("https://app.please-open.it/auth/realms/ee1afd72-71a9-49ad-a975-54ed46cc56a3/protocol/openid-connect/logout?redirect_uri=http://localhost:8082")
+                        .logoutSuccessUrl(issuerUri + "/protocol/openid-connect/logout?redirect_uri=" + domainUrl)
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
                         .deleteCookies("JSESSIONID"));
@@ -84,23 +76,6 @@ class SecurityConfig {
         return http.build();
     }
 
-    // @Bean
-    // public RestTemplate restTemplate() {
-
-    //     RestTemplate restTemplate = new RestTemplate(new BufferingClientHttpRequestFactory(new SimpleClientHttpRequestFactory()));
-    //     List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>();
-    //     interceptors.add(new LoggingRequestInterceptor());
-    //     restTemplate.setInterceptors(interceptors);
-
-    //     return restTemplate;
-    // }
-
-    // @Bean
-    // public DefaultAuthorizationCodeTokenResponseClient accessTokenResponseClient() {
-    //     DefaultAuthorizationCodeTokenResponseClient client = new DefaultAuthorizationCodeTokenResponseClient();
-    //     client.setRestOperations(restTemplate()); // ✅ Use custom RestTemplate
-    //     return client;
-    // }
 
     @Bean
     public GrantedAuthoritiesMapper userAuthoritiesMapper() {
