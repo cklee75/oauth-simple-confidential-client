@@ -19,6 +19,8 @@ import reactor.core.publisher.Mono;
 public class WebClientConfig {
 
 
+    // No needed as Spring will create a default OAuth2AuthorizedClientManager
+    /*     
     @Bean
     public OAuth2AuthorizedClientManager authorizedClientManager(
             ClientRegistrationRepository clientRegistrationRepository,
@@ -35,7 +37,8 @@ public class WebClientConfig {
         authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
 
         return authorizedClientManager;
-    }
+    } 
+    */
 
     @Bean
     public WebClient webClient(OAuth2AuthorizedClientManager authorizedClientManager) {
@@ -51,22 +54,6 @@ public class WebClientConfig {
                 .build();
     }
 
-/*     @Bean
-    public WebClient webClient(ClientRegistrationRepository clientRegistrationRepository,
-                               OAuth2AuthorizedClientRepository authorizedClientRepository) {
-
-        // Set up OAuth2 authentication for WebClient
-        ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Filter =
-                new ServletOAuth2AuthorizedClientExchangeFilterFunction(clientRegistrationRepository, authorizedClientRepository);
-
-        oauth2Filter.setDefaultOAuth2AuthorizedClient(true);
-
-        return WebClient.builder()
-                .apply(oauth2Filter.oauth2Configuration())
-                .filter(logRequest())  // Log Request
-                .filter(logResponse()) // Log Response
-                .build();
-    } */
 
     private ExchangeFilterFunction logRequest() {
         return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
